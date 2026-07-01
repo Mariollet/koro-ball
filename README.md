@@ -1,5 +1,7 @@
 # Koro-ball 🐙
 
+[![CI](https://github.com/Mariollet/koro-ball/actions/workflows/ci.yml/badge.svg)](https://github.com/Mariollet/koro-ball/actions/workflows/ci.yml)
+
 Une petite tête de Koro-sensei pendue à une corde, en haut de ton écran.
 Il sourit. Il te regarde. Il esquive à Mach 20. *Nurufufufu~*
 
@@ -67,6 +69,12 @@ npm run dist
 
 > Windows SmartScreen au premier lancement (exe non signé) :
 > *Informations complémentaires* → *Exécuter quand même*.
+
+### Release automatique
+
+Pousser un tag `v*` (ex. `git tag v1.1.0 && git push --tags`) déclenche une build
+sur GitHub Actions qui publie l'installeur et le portable sur une Release GitHub.
+Déclenchable aussi à la main depuis l'onglet **Actions** (`workflow_dispatch`).
 
 ## Sous le capot
 

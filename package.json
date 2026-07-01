@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "description": "Une tete de Koro-sensei suspendue en haut de l'ecran : overlay Electron transparent, always-on-top, click-through.",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mariollet/koro-ball.git"
+  },
   "scripts": {
     "start": "electron .",
+    "test": "node test/physics.test.js",
     "geticon": "node scripts/gen-icon.js",
     "pack": "electron-builder --dir",
     "dist": "npm run geticon && electron-builder"
@@ -35,6 +40,11 @@
     ],
     "directories": {
       "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Mariollet",
+      "repo": "koro-ball"
     },
     "win": {
       "target": [
