@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verifie la syntaxe des sources
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check renderer/toy.js
+          node --check scripts/gen-icon.js
+          node --check settings/settings.js
+
+      - name: Genere les icones (sans dependance)
+        run: npm run geticon
+
+      - name: Tests de regression physique
+        run: npm test
