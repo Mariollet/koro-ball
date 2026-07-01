@@ -17,7 +17,7 @@ const DEFAULTS = {
   ball: { color: '#f4c430', radius: 26 },
   rope: { color: '#d2b48c', length: 340, stiffness: 18 },
   break: { enabled: true, sensitivity: 0.4, respawnMs: 2600 },
-  placement: { display: 0, anchorPct: 0.5 },
+  placement: { anchorPct: 0.5 },
   autostart: false,
 };
 let S = (window.toy && window.toy.getSettings) ? window.toy.getSettings() : DEFAULTS;

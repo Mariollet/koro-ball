@@ -56,8 +56,8 @@ Astuce : plus il est énervé, plus il esquive. Comme le vrai.
 ## Le personnaliser
 
 Icône de la zone de notification → **Paramètres…**
-Couleur, taille, longueur de corde, fragilité, écran cible, position du crochet —
-tout s'applique en direct.
+Couleur, taille, longueur de corde, fragilité, position du crochet —
+tout s'applique en direct, sur tous les écrans à la fois.
 
 ## Fabriquer le .exe
 

@@ -2,18 +2,8 @@
 
 const el = (id) => document.getElementById(id);
 
-// Liste des ecrans disponibles
-const displays = window.toy.getDisplays();
-const dsel = el('display');
-displays.forEach((d) => {
-  const o = document.createElement('option');
-  o.value = String(d.index);
-  o.textContent = d.label + (d.primary ? ' — principal' : '');
-  dsel.appendChild(o);
-});
-
 const CONTROLS = ['ballRadius', 'ropeColor', 'ropeLength', 'ropeStiffness',
-  'breakEnabled', 'breakSens', 'respawnMs', 'display', 'anchorPct', 'autostart'];
+  'breakEnabled', 'breakSens', 'respawnMs', 'anchorPct', 'autostart'];
 
 function renderOutputs() {
   el('ballRadiusOut').textContent = el('ballRadius').value + ' px';
@@ -32,7 +22,6 @@ function fill(s) {
   el('breakEnabled').checked = s.break.enabled;
   el('breakSens').value = s.break.sensitivity;
   el('respawnMs').value = s.break.respawnMs;
-  el('display').value = String(s.placement.display);
   el('anchorPct').value = s.placement.anchorPct;
   el('autostart').checked = s.autostart;
   renderOutputs();
@@ -43,7 +32,7 @@ function collect() {
     ball: { radius: +el('ballRadius').value },
     rope: { color: el('ropeColor').value, length: +el('ropeLength').value, stiffness: +el('ropeStiffness').value },
     break: { enabled: el('breakEnabled').checked, sensitivity: +el('breakSens').value, respawnMs: +el('respawnMs').value },
-    placement: { display: +el('display').value, anchorPct: +el('anchorPct').value },
+    placement: { anchorPct: +el('anchorPct').value },
     autostart: el('autostart').checked,
   };
 }
