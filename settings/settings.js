@@ -12,7 +12,7 @@ displays.forEach((d) => {
   dsel.appendChild(o);
 });
 
-const CONTROLS = ['ballColor', 'ballRadius', 'ropeColor', 'ropeLength', 'ropeStiffness',
+const CONTROLS = ['ballRadius', 'ropeColor', 'ropeLength', 'ropeStiffness',
   'breakEnabled', 'breakSens', 'respawnMs', 'display', 'anchorPct', 'autostart'];
 
 function renderOutputs() {
@@ -25,7 +25,6 @@ function renderOutputs() {
 }
 
 function fill(s) {
-  el('ballColor').value = s.ball.color;
   el('ballRadius').value = s.ball.radius;
   el('ropeColor').value = s.rope.color;
   el('ropeLength').value = s.rope.length;
@@ -41,7 +40,7 @@ function fill(s) {
 
 function collect() {
   return {
-    ball: { color: el('ballColor').value, radius: +el('ballRadius').value },
+    ball: { radius: +el('ballRadius').value },
     rope: { color: el('ropeColor').value, length: +el('ropeLength').value, stiffness: +el('ropeStiffness').value },
     break: { enabled: el('breakEnabled').checked, sensitivity: +el('breakSens').value, respawnMs: +el('respawnMs').value },
     placement: { display: +el('display').value, anchorPct: +el('anchorPct').value },
