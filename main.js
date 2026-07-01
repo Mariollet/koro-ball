@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { buildTrayIconBuffer } = require('./scripts/gen-icon');
 
-const overlays = new Map(); // id d'ecran -> BrowserWindow (un Koro-ball independant par ecran)
+let win = null;          // overlay unique, etendu sur tous les ecrans
 let settingsWin = null;
 let tray = null;
 let paused = false;
@@ -56,24 +56,33 @@ function applyMainSide() {
   app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
 }
 
-function broadcastToOverlays(channel, ...args) {
-  for (const w of overlays.values()) {
-    if (!w.isDestroyed()) w.webContents.send(channel, ...args);
-  }
-}
-
 function broadcastSettings() {
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send('settings', settings);
   }
 }
 
-// ---- Overlays : un Koro-ball independant par ecran connecte -----------
-function createOverlayForDisplay(display) {
-  const { x, y, width, height } = display.workArea;
+// Rectangle englobant tous les ecrans connectes : Koro-ball peut ainsi se
+// balancer, se faire lancer et traverser d'un ecran a l'autre. Base sur
+// workArea (pas bounds) pour ne jamais recouvrir la barre des taches.
+function virtualDesktopBounds() {
+  const areas = screen.getAllDisplays().map((d) => d.workArea);
+  const left = Math.min(...areas.map((a) => a.x));
+  const top = Math.min(...areas.map((a) => a.y));
+  const right = Math.max(...areas.map((a) => a.x + a.width));
+  const bottom = Math.max(...areas.map((a) => a.y + a.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
 
-  const win = new BrowserWindow({
-    x, y, width, height,
+// ---- Overlay -------------------------------------------------------------
+function createWindow() {
+  // Chromium restreint silencieusement la taille demandee AU CONSTRUCTEUR a un
+  // seul ecran (meme avec resizable:false) : sur Windows, une fenetre plus
+  // large que le moniteur qui la contient est clampee des la creation. On
+  // cree donc une fenetre minimale, puis on l'etend via setBounds() ensuite —
+  // ce chemin-la n'est pas soumis a la meme restriction.
+  win = new BrowserWindow({
+    x: 0, y: 0, width: 1, height: 1,
     transparent: true,
     frame: false,
     resizable: false,
@@ -92,6 +101,7 @@ function createOverlayForDisplay(display) {
       backgroundThrottling: false,
     },
   });
+  win.setBounds(virtualDesktopBounds());
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.setAlwaysOnTop(true, 'screen-saver');
@@ -100,32 +110,15 @@ function createOverlayForDisplay(display) {
 
   win.once('ready-to-show', () => win.show());
   win.webContents.on('render-process-gone', () => {
-    if (!win.isDestroyed()) win.reload();
+    if (win && !win.isDestroyed()) win.reload();
   });
-  win.on('closed', () => { overlays.delete(display.id); });
-
-  overlays.set(display.id, win);
+  win.on('closed', () => { win = null; });
 }
 
-// Aligne le jeu d'overlays sur les ecrans reellement connectes : cree un
-// Koro-ball pour tout nouvel ecran, ferme celui d'un ecran debranche, et
-// repositionne les autres si leur zone de travail a change (resolution,
-// DPI, barre des taches).
-function syncOverlays() {
-  const displays = screen.getAllDisplays();
-  const liveIds = new Set(displays.map((d) => d.id));
-
-  for (const [id, w] of overlays) {
-    if (!liveIds.has(id) && !w.isDestroyed()) w.close();
-  }
-  for (const display of displays) {
-    const existing = overlays.get(display.id);
-    if (existing && !existing.isDestroyed()) {
-      existing.setBounds(display.workArea);
-    } else {
-      createOverlayForDisplay(display);
-    }
-  }
+// Reajuste la fenetre sur l'union des ecrans quand la configuration change
+// (branchement/debranchement d'un moniteur, resolution, barre des taches).
+function fitToVirtualDesktop() {
+  if (win && !win.isDestroyed()) win.setBounds(virtualDesktopBounds());
 }
 
 // ---- Fenetre de reglages ----------------------------------------------
@@ -150,11 +143,8 @@ function openSettings() {
 }
 
 // ---- IPC ---------------------------------------------------------------
-// Le click-through s'applique a l'overlay qui a envoye le message (chaque
-// ecran a sa propre fenetre, donc son propre etat interactif/traversant).
-ipcMain.on('set-interactive', (e, interactive) => {
-  const w = BrowserWindow.fromWebContents(e.sender);
-  if (w && !w.isDestroyed()) w.setIgnoreMouseEvents(!interactive, { forward: true });
+ipcMain.on('set-interactive', (_e, interactive) => {
+  if (win && !win.isDestroyed()) win.setIgnoreMouseEvents(!interactive, { forward: true });
 });
 
 ipcMain.on('get-settings', (e) => { e.returnValue = settings; });
@@ -212,7 +202,7 @@ function rebuildTrayMenu() {
       checked: settings.autostart,
       click: (mi) => { settings.autostart = mi.checked; saveSettings(); applyMainSide(); },
     },
-    { label: 'Recentrer le jouet', click: () => broadcastToOverlays('recenter') },
+    { label: 'Recentrer le jouet', click: () => win && win.webContents.send('recenter') },
     { type: 'separator' },
     { label: 'Quitter', click: () => app.quit() },
   ]);
@@ -221,7 +211,7 @@ function rebuildTrayMenu() {
 
 function togglePause() {
   paused = !paused;
-  broadcastToOverlays('set-paused', paused);
+  if (win) win.webContents.send('set-paused', paused);
   rebuildTrayMenu();
 }
 
@@ -236,7 +226,7 @@ function registerFirst(accelerators, handler) {
 // ---- Cycle de vie ------------------------------------------------------
 app.whenReady().then(() => {
   loadSettings();
-  syncOverlays();
+  createWindow();
   buildTray();
   applyMainSide();
 
@@ -244,9 +234,9 @@ app.whenReady().then(() => {
   const quitAcc = registerFirst(['CommandOrControl+Alt+Q', 'CommandOrControl+Shift+Q'], () => app.quit());
   if (!quitAcc) console.warn('[koro-ball] Aucun raccourci Quitter dispo — utilise le menu du tray.');
 
-  screen.on('display-metrics-changed', syncOverlays);
-  screen.on('display-added', syncOverlays);
-  screen.on('display-removed', syncOverlays);
+  screen.on('display-metrics-changed', fitToVirtualDesktop);
+  screen.on('display-added', fitToVirtualDesktop);
+  screen.on('display-removed', fitToVirtualDesktop);
 });
 
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
