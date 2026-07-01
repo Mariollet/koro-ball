@@ -11,7 +11,6 @@ contextBridge.exposeInMainWorld('toy', {
 
   // --- Reglages (partages) ---
   getSettings: () => ipcRenderer.sendSync('get-settings'),
-  getDisplays: () => ipcRenderer.sendSync('get-displays'),
   setSettings: (patch) => ipcRenderer.send('settings-set', patch),
   resetSettings: () => ipcRenderer.send('settings-reset'),
   onSettings: (cb) => ipcRenderer.on('settings', (_e, s) => cb(s)),

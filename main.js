@@ -5,8 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const { buildTrayIconBuffer } = require('./scripts/gen-icon');
 
-let win = null;          // overlay
-let settingsWin = null;  // fenetre de reglages
+const overlays = new Map(); // id d'ecran -> BrowserWindow (un Koro-ball independant par ecran)
+let settingsWin = null;
 let tray = null;
 let paused = false;
 
@@ -15,7 +15,7 @@ const DEFAULT_SETTINGS = {
   ball: { color: '#f4c430', radius: 26 },
   rope: { color: '#d2b48c', length: 340, stiffness: 18 },
   break: { enabled: true, sensitivity: 0.4, respawnMs: 2600 },
-  placement: { display: 0, anchorPct: 0.5 },
+  placement: { anchorPct: 0.5 },
   autostart: false,
 };
 
@@ -51,15 +51,15 @@ function saveSettings() {
   } catch (_e) { /* non bloquant */ }
 }
 
-function targetDisplay() {
-  const displays = screen.getAllDisplays();
-  return displays[settings.placement.display] || screen.getPrimaryDisplay();
+// Effet cote main qui ne depend pas d'un ecran : demarrage auto.
+function applyMainSide() {
+  app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
 }
 
-// Effets cote main : ecran cible + demarrage auto.
-function applyMainSide() {
-  if (win && !win.isDestroyed()) win.setBounds(targetDisplay().workArea);
-  app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
+function broadcastToOverlays(channel, ...args) {
+  for (const w of overlays.values()) {
+    if (!w.isDestroyed()) w.webContents.send(channel, ...args);
+  }
 }
 
 function broadcastSettings() {
@@ -68,11 +68,11 @@ function broadcastSettings() {
   }
 }
 
-// ---- Overlay -----------------------------------------------------------
-function createWindow() {
-  const { x, y, width, height } = targetDisplay().workArea;
+// ---- Overlays : un Koro-ball independant par ecran connecte -----------
+function createOverlayForDisplay(display) {
+  const { x, y, width, height } = display.workArea;
 
-  win = new BrowserWindow({
+  const win = new BrowserWindow({
     x, y, width, height,
     transparent: true,
     frame: false,
@@ -100,13 +100,32 @@ function createWindow() {
 
   win.once('ready-to-show', () => win.show());
   win.webContents.on('render-process-gone', () => {
-    if (win && !win.isDestroyed()) win.reload();
+    if (!win.isDestroyed()) win.reload();
   });
-  win.on('closed', () => { win = null; });
+  win.on('closed', () => { overlays.delete(display.id); });
+
+  overlays.set(display.id, win);
 }
 
-function fitToTarget() {
-  if (win && !win.isDestroyed()) win.setBounds(targetDisplay().workArea);
+// Aligne le jeu d'overlays sur les ecrans reellement connectes : cree un
+// Koro-ball pour tout nouvel ecran, ferme celui d'un ecran debranche, et
+// repositionne les autres si leur zone de travail a change (resolution,
+// DPI, barre des taches).
+function syncOverlays() {
+  const displays = screen.getAllDisplays();
+  const liveIds = new Set(displays.map((d) => d.id));
+
+  for (const [id, w] of overlays) {
+    if (!liveIds.has(id) && !w.isDestroyed()) w.close();
+  }
+  for (const display of displays) {
+    const existing = overlays.get(display.id);
+    if (existing && !existing.isDestroyed()) {
+      existing.setBounds(display.workArea);
+    } else {
+      createOverlayForDisplay(display);
+    }
+  }
 }
 
 // ---- Fenetre de reglages ----------------------------------------------
@@ -131,20 +150,14 @@ function openSettings() {
 }
 
 // ---- IPC ---------------------------------------------------------------
-ipcMain.on('set-interactive', (_e, interactive) => {
-  if (win && !win.isDestroyed()) win.setIgnoreMouseEvents(!interactive, { forward: true });
+// Le click-through s'applique a l'overlay qui a envoye le message (chaque
+// ecran a sa propre fenetre, donc son propre etat interactif/traversant).
+ipcMain.on('set-interactive', (e, interactive) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (w && !w.isDestroyed()) w.setIgnoreMouseEvents(!interactive, { forward: true });
 });
 
 ipcMain.on('get-settings', (e) => { e.returnValue = settings; });
-
-ipcMain.on('get-displays', (e) => {
-  const primaryId = screen.getPrimaryDisplay().id;
-  e.returnValue = screen.getAllDisplays().map((d, i) => ({
-    index: i,
-    label: `Écran ${i + 1} (${d.size.width}×${d.size.height})`,
-    primary: d.id === primaryId,
-  }));
-});
 
 ipcMain.on('settings-set', (_e, patch) => {
   settings = deepMerge(settings, patch);
@@ -199,7 +212,7 @@ function rebuildTrayMenu() {
       checked: settings.autostart,
       click: (mi) => { settings.autostart = mi.checked; saveSettings(); applyMainSide(); },
     },
-    { label: 'Recentrer le jouet', click: () => win && win.webContents.send('recenter') },
+    { label: 'Recentrer le jouet', click: () => broadcastToOverlays('recenter') },
     { type: 'separator' },
     { label: 'Quitter', click: () => app.quit() },
   ]);
@@ -208,7 +221,7 @@ function rebuildTrayMenu() {
 
 function togglePause() {
   paused = !paused;
-  if (win) win.webContents.send('set-paused', paused);
+  broadcastToOverlays('set-paused', paused);
   rebuildTrayMenu();
 }
 
@@ -223,7 +236,7 @@ function registerFirst(accelerators, handler) {
 // ---- Cycle de vie ------------------------------------------------------
 app.whenReady().then(() => {
   loadSettings();
-  createWindow();
+  syncOverlays();
   buildTray();
   applyMainSide();
 
@@ -231,9 +244,9 @@ app.whenReady().then(() => {
   const quitAcc = registerFirst(['CommandOrControl+Alt+Q', 'CommandOrControl+Shift+Q'], () => app.quit());
   if (!quitAcc) console.warn('[koro-ball] Aucun raccourci Quitter dispo — utilise le menu du tray.');
 
-  screen.on('display-metrics-changed', fitToTarget);
-  screen.on('display-added', fitToTarget);
-  screen.on('display-removed', fitToTarget);
+  screen.on('display-metrics-changed', syncOverlays);
+  screen.on('display-added', syncOverlays);
+  screen.on('display-removed', syncOverlays);
 });
 
 app.on('will-quit', () => { globalShortcut.unregisterAll(); });
