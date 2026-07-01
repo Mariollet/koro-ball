@@ -1,7 +1,7 @@
 {
-  "name": "desktop-cat-toy",
+  "name": "koro-ball",
   "version": "1.0.0",
-  "description": "Jouet a chat interactif (grelot sur corde) suspendu en haut de l'ecran : overlay Electron transparent, always-on-top, click-through.",
+  "description": "Une tete de Koro-sensei suspendue en haut de l'ecran : overlay Electron transparent, always-on-top, click-through.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +12,7 @@
   "keywords": [
     "electron",
     "overlay",
-    "cat-toy",
+    "koro-sensei",
     "desktop-pet",
     "windows"
   ],
@@ -23,8 +23,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "fr.studiokg.cattoy",
-    "productName": "Cat Toy",
+    "appId": "fr.studiokg.koroball",
+    "productName": "Koro-ball",
     "files": [
       "main.js",
       "preload.js",
@@ -48,7 +48,7 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Cat Toy"
+      "shortcutName": "Koro-ball"
     }
   }
 }

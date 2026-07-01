@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * Cat Toy - petite tete de Koro-sensei suspendue a une corde.
+ * Koro-ball - petite tete de Koro-sensei suspendue a une corde.
  * Corde = chaine de points (integration de Verlet) avec contraintes de distance.
  * La tete oscille, s'attrape/se lance, esquive parfois les coups (et nargue),
  * s'use et casse si on joue trop, redescend du haut, et s'endort au repos.

@@ -1,4 +1,4 @@
-# Cat Toy 🐙 — Koro-sensei sur ton bureau
+# Koro-ball 🐙
 
 Une petite tête de Koro-sensei pendue à une corde, en haut de ton écran.
 Il sourit. Il te regarde. Il esquive à Mach 20. *Nurufufufu~*
@@ -9,8 +9,8 @@ sauf quand tu décides de l'attraper.
 ## Lancer
 
 ```bash
-git clone https://github.com/Mariollet/desktop-cat-toy.git
-cd desktop-cat-toy
+git clone https://github.com/Mariollet/koro-ball.git
+cd koro-ball
 npm install
 npm start
 ```
@@ -63,7 +63,7 @@ tout s'applique en direct.
 npm run dist
 ```
 
-→ `dist/Cat Toy Setup 1.0.0.exe` (installeur) et `dist/Cat Toy 1.0.0.exe` (portable).
+→ `dist/Koro-ball Setup 1.0.0.exe` (installeur) et `dist/Koro-ball 1.0.0.exe` (portable).
 
 > Windows SmartScreen au premier lancement (exe non signé) :
 > *Informations complémentaires* → *Exécuter quand même*.
