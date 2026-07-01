@@ -1,0 +1,54 @@
+{
+  "name": "desktop-cat-toy",
+  "version": "1.0.0",
+  "description": "Jouet a chat interactif (grelot sur corde) suspendu en haut de l'ecran : overlay Electron transparent, always-on-top, click-through.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "geticon": "node scripts/gen-icon.js",
+    "pack": "electron-builder --dir",
+    "dist": "npm run geticon && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "overlay",
+    "cat-toy",
+    "desktop-pet",
+    "windows"
+  ],
+  "author": "Mariollet",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "fr.studiokg.cattoy",
+    "productName": "Cat Toy",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**",
+      "settings/**",
+      "assets/**",
+      "scripts/gen-icon.js"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Cat Toy"
+    }
+  }
+}

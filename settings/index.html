@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;" />
+    <title>Cat Toy — Paramètres</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <h1>🐾 Cat Toy</h1>
+    <p class="sub">Les réglages s'appliquent en direct.</p>
+
+    <section>
+      <h2>Balle</h2>
+      <label class="row">
+        <span>Couleur</span>
+        <input type="color" id="ballColor" />
+      </label>
+      <label class="row">
+        <span>Taille</span>
+        <input type="range" id="ballRadius" min="12" max="60" step="1" />
+        <output id="ballRadiusOut"></output>
+      </label>
+    </section>
+
+    <section>
+      <h2>Corde</h2>
+      <label class="row">
+        <span>Couleur</span>
+        <input type="color" id="ropeColor" />
+      </label>
+      <label class="row">
+        <span>Longueur</span>
+        <input type="range" id="ropeLength" min="120" max="700" step="10" />
+        <output id="ropeLengthOut"></output>
+      </label>
+      <label class="row">
+        <span>Raideur</span>
+        <input type="range" id="ropeStiffness" min="4" max="30" step="1" />
+        <output id="ropeStiffnessOut"></output>
+      </label>
+    </section>
+
+    <section>
+      <h2>Casse &amp; réapparition</h2>
+      <label class="row check">
+        <input type="checkbox" id="breakEnabled" />
+        <span>La corde peut casser</span>
+      </label>
+      <label class="row">
+        <span>Fragilité</span>
+        <input type="range" id="breakSens" min="0.3" max="3" step="0.1" />
+        <output id="breakSensOut"></output>
+      </label>
+      <label class="row">
+        <span>Délai de retour</span>
+        <input type="range" id="respawnMs" min="500" max="8000" step="100" />
+        <output id="respawnMsOut"></output>
+      </label>
+    </section>
+
+    <section>
+      <h2>Placement</h2>
+      <label class="row">
+        <span>Écran</span>
+        <select id="display"></select>
+      </label>
+      <label class="row">
+        <span>Position du crochet</span>
+        <input type="range" id="anchorPct" min="0.05" max="0.95" step="0.01" />
+        <output id="anchorPctOut"></output>
+      </label>
+    </section>
+
+    <section>
+      <h2>Système</h2>
+      <label class="row check">
+        <input type="checkbox" id="autostart" />
+        <span>Démarrer avec Windows</span>
+      </label>
+    </section>
+
+    <div class="actions">
+      <button id="reset" type="button">Réinitialiser</button>
+    </div>
+
+    <script src="settings.js"></script>
+  </body>
+</html>
