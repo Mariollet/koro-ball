@@ -1,8 +1,9 @@
 'use strict';
 
 /*
- * Genere l'icone "boule a grelot" doree en PNG RGBA, a n'importe quelle taille.
- * Encodage PNG manuel via zlib -> aucune dependance externe.
+ * Genere l'icone "tete de Koro-sensei" (chapeau de diplome + grand sourire)
+ * en PNG RGBA, a n'importe quelle taille. Dessin pixel par pixel, encodage
+ * PNG manuel via zlib -> aucune dependance externe.
  *
  * CLI (`node scripts/gen-icon.js`) : ecrit assets/tray.png (32) + build/icon.png (256).
  * Importable : main.js appelle buildTrayIconBuffer() en repli du tray.
@@ -38,33 +39,76 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crc]);
 }
 
-// --- Construit un PNG "boule doree" de taille `size` --------------------
+// --- Couleur d'un pixel en coordonnees normalisees (unites de rayon) ----
+// (0,0) = centre de la tete ; le chapeau depasse vers le haut (dy negatif).
+function koroPixel(dx, dy) {
+  const d = Math.hypot(dx, dy);
+
+  // gland dore du chapeau (au bout, cote droit)
+  if (Math.hypot(dx - 0.66, dy + 0.60) < 0.11) return [216, 184, 74, 255];
+
+  // planche du chapeau (losange aplati, depasse du crane)
+  const ax = Math.abs(dx);
+  if (ax <= 0.95) {
+    const k = 1 - ax / 0.95;
+    const yTop = -0.78 - 0.28 * k;
+    const yBot = -0.78 + 0.20 * k;
+    if (dy >= yTop && dy <= yBot) return [34, 34, 39, 255];
+  }
+
+  if (d > 1) return [0, 0, 0, 0];
+
+  // bord adouci de la tete
+  const edgeAlpha = d > 0.955 ? 175 : 255;
+
+  // calotte sombre posee sur le crane
+  if (dy < -0.62) return [46, 46, 52, edgeAlpha];
+
+  // yeux (petits ovales sombres)
+  const ex = (ax - 0.34) / 0.10;
+  const ey = (dy + 0.30) / 0.12;
+  if (ex * ex + ey * ey < 1) return [36, 31, 28, 255];
+
+  // grand sourire croissant (entre deux paraboles), avec contour sombre
+  const u = dx / 0.80;
+  if (Math.abs(u) <= 1) {
+    const bump = 1 - u * u;
+    const yT = 0.02 + 0.17 * bump; // bord superieur (dents en haut)
+    const yB = 0.02 + 0.47 * bump; // bord inferieur (creux du sourire)
+    if (dy >= yT && dy <= yB) {
+      const border = 0.055;
+      if (dy - yT < border || yB - dy < border) return [58, 36, 24, 255];
+      return [253, 251, 242, 255];
+    }
+  }
+
+  // visage jaune, aplat legerement modele (lumiere en haut a gauche)
+  const light = Math.max(0, 1 - Math.hypot(dx + 0.30, dy + 0.35) / 1.3);
+  let r = 244, g = 196, b = 48;
+  r = Math.min(255, r + light * 16);
+  g = Math.min(255, g + light * 22);
+  b = Math.min(255, b + light * 26);
+  if (d > 0.82) {
+    const k = (d - 0.82) / 0.18 * 0.22;
+    r *= 1 - k; g *= 1 - k; b *= 1 - k;
+  }
+  return [Math.round(r), Math.round(g), Math.round(b), edgeAlpha];
+}
+
+// --- Construit le PNG en memoire ----------------------------------------
 function buildIconBuffer(size = 32) {
   const raw = Buffer.alloc(size * (size * 4 + 1)); // +1 octet de filtre par ligne
-  const cx = size / 2 - 0.5;
-  const cy = size / 2 - 0.5;
-  const R = size * 0.44;
-  const lightOff = size * 0.125;
+  const cx = size * 0.5;
+  const cy = size * 0.54;
+  const R = size * 0.42;
 
   for (let y = 0; y < size; y++) {
     const rowStart = y * (size * 4 + 1);
     raw[rowStart] = 0; // filtre 0 (None)
     for (let x = 0; x < size; x++) {
       const off = rowStart + 1 + x * 4;
-      const d = Math.hypot(x - cx, y - cy);
-      if (d <= R) {
-        const light = Math.max(0, 1 - Math.hypot(x - (cx - lightOff), y - (cy - lightOff)) / (R * 1.3));
-        const t = d / R;
-        const rr = Math.round(240 - t * 120 + light * 30);
-        const gg = Math.round(180 - t * 110 + light * 40);
-        const bb = Math.round(60 - t * 40 + light * 30);
-        raw[off] = Math.min(255, Math.max(0, rr));
-        raw[off + 1] = Math.min(255, Math.max(0, gg));
-        raw[off + 2] = Math.min(255, Math.max(0, bb));
-        raw[off + 3] = d > R - 1 ? 180 : 255;
-      } else {
-        raw[off] = 0; raw[off + 1] = 0; raw[off + 2] = 0; raw[off + 3] = 0;
-      }
+      const [r, g, b, a] = koroPixel((x + 0.5 - cx) / R, (y + 0.5 - cy) / R);
+      raw[off] = r; raw[off + 1] = g; raw[off + 2] = b; raw[off + 3] = a;
     }
   }
 

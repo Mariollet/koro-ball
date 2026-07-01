@@ -12,9 +12,9 @@ let paused = false;
 
 // ---- Reglages ----------------------------------------------------------
 const DEFAULT_SETTINGS = {
-  ball: { color: '#f0b23c', radius: 26 },
+  ball: { color: '#f4c430', radius: 26 },
   rope: { color: '#d2b48c', length: 340, stiffness: 18 },
-  break: { enabled: true, sensitivity: 1, respawnMs: 2600 },
+  break: { enabled: true, sensitivity: 0.4, respawnMs: 2600 },
   placement: { display: 0, anchorPct: 0.5 },
   autostart: false,
 };
