@@ -117,7 +117,7 @@ function openSettings() {
     height: 680,
     resizable: false,
     fullscreenable: false,
-    title: 'Cat Toy — Paramètres',
+    title: 'Koro-ball — Paramètres',
     autoHideMenuBar: true,
     backgroundColor: '#1e1f24',
     webPreferences: {
@@ -176,7 +176,7 @@ function trayIconImage() {
 
 function buildTray() {
   tray = new Tray(trayIconImage());
-  tray.setToolTip('Cat Toy');
+  tray.setToolTip('Koro-ball');
   tray.on('double-click', openSettings);
   rebuildTrayMenu();
 }
@@ -229,7 +229,7 @@ app.whenReady().then(() => {
 
   registerFirst(['CommandOrControl+Alt+P', 'CommandOrControl+Shift+P'], togglePause);
   const quitAcc = registerFirst(['CommandOrControl+Alt+Q', 'CommandOrControl+Shift+Q'], () => app.quit());
-  if (!quitAcc) console.warn('[cat-toy] Aucun raccourci Quitter dispo — utilise le menu du tray.');
+  if (!quitAcc) console.warn('[koro-ball] Aucun raccourci Quitter dispo — utilise le menu du tray.');
 
   screen.on('display-metrics-changed', fitToTarget);
   screen.on('display-added', fitToTarget);
