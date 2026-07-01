@@ -1,73 +1,79 @@
-# Cat Toy 🐾
+# Cat Toy 🐙 — Koro-sensei sur ton bureau
 
-Un jouet à chat interactif (boule à grelot au bout d'une corde) suspendu en haut de ton écran.
-Overlay **Electron transparent, always-on-top**, qui ne gêne pas ton travail : les clics
-traversent vers les applis en dessous, sauf quand tu attrapes le jouet.
+Une petite tête de Koro-sensei pendue à une corde, en haut de ton écran.
+Il sourit. Il te regarde. Il esquive à Mach 20. *Nurufufufu~*
 
-## Fonctionnalités
-
-- **Physique de corde** réaliste (intégration de Verlet) : oscillation, inertie, rebond.
-- **Attraper / lancer** : clique sur la boule, déplace-la, relâche pour la lancer.
-- **Réaction souris** : un mouvement rapide près de la boule lui donne un coup de patte
-  et la fait tinter — aucun module natif, aucune écoute clavier.
-- **La corde s'use et casse** : si tu joues trop (tirage fort, coups répétés), la corde
-  rougit, s'amincit, puis rompt — la balle tombe. ~2,6 s plus tard, une nouvelle balle
-  redescend du haut et se re-suspend. La corde cicatrise si tu la laisses tranquille.
-- **Repos total** : sans mouvement de souris, la balle reste parfaitement immobile
-  (mise en sommeil ; elle se réveille au coup de patte ou quand on l'attrape).
-- **Click-through intelligent** : l'overlay laisse passer tes clics partout, sauf sur le jouet.
-- **Ne vole jamais le focus** : tu continues de taper dans VSCode / ailleurs sans interruption.
-
-## Prérequis
-
-- [Node.js](https://nodejs.org/) (testé avec v22)
-
-## Installation
-
-```bash
-cd C:\laragon\www\cat-toy
-npm install          # installe Electron
-npm run geticon      # génère l'icône du tray (assets/tray.png)
-```
+Et surtout : **il ne gêne jamais ton travail** — tes clics passent à travers lui,
+sauf quand tu décides de l'attraper.
 
 ## Lancer
 
 ```bash
+git clone https://github.com/Mariollet/desktop-cat-toy.git
+cd desktop-cat-toy
+npm install
 npm start
 ```
 
-Un jouet apparaît suspendu en haut de l'écran.
+## Le manuel de l'assassin
 
-## Contrôles
-
-| Action | Comment |
+| Toi | Lui |
 | --- | --- |
-| Attraper / lancer | Clic gauche sur la boule, glisse, relâche |
-| Coup de patte | Passe la souris rapidement près de la boule |
-| Pause / reprise | `Ctrl+Alt+P` ou menu de l'icône (barre des tâches, zone de notification) |
-| Recentrer | Menu de l'icône → « Recentrer le jouet » |
-| Quitter | `Ctrl+Alt+Q` ou menu de l'icône → « Quitter » |
+| Tu approches la souris | Ses yeux te suivent 👀 |
+| Tu cliques et tu tires | Attrapé ! (relâche pour le lancer) |
+| Tu fonces dessus | Coup de patte... ou **esquive Mach 20** et il te nargue 😏 |
+| Tu t'acharnes | La corde rougit, s'amincit... et **casse** 💥 |
+| Tu attends 3 secondes | Il redescend du plafond, l'air de rien ⭕ |
+| Tu le laisses tranquille | Il s'endort. Et ne bouge plus **du tout** 💤 |
 
-## Structure
+## Ses humeurs
 
+Comme le vrai, sa tête change de couleur selon son état :
+
+| Tête | Ça veut dire |
+| --- | --- |
+| 🟡 Jaune, grand sourire | Tout va bien |
+| 🟢 Rayures vertes | Il vient d'esquiver ton coup (et il est fier) |
+| 🔵 Bleu + sueur | Tu l'as attrapé / lancé trop fort |
+| 🩵 Bleu clair + larmes | Tu l'as écrasé contre un bord, bravo |
+| 🔴 Rouge + veine | Il commence à s'énerver (la corde fatigue) |
+| ⚫ Noir + aura | DANGER. La corde va lâcher |
+| 🟣 Violet + X rouge | Raté... il tombe |
+| 🟠 Orange + cercle | « Tout juste ! » — il est de retour |
+| 🩷 Rose + zzz | Il dort (c'est le seul moment où il est vulnérable) |
+
+Astuce : plus il est énervé, plus il esquive. Comme le vrai.
+
+## Raccourcis
+
+- **Pause / reprise** : `Ctrl+Alt+P`
+- **Quitter** : `Ctrl+Alt+Q`
+- **Tout le reste** : clic droit sur l'icône 🐙 dans la zone de notification
+  (Paramètres, recentrer, démarrage avec Windows...)
+
+## Le personnaliser
+
+Icône de la zone de notification → **Paramètres…**
+Couleur, taille, longueur de corde, fragilité, écran cible, position du crochet —
+tout s'applique en direct.
+
+## Fabriquer le .exe
+
+```bash
+npm run dist
 ```
-cat-toy/
-├── main.js            # process principal : fenêtre overlay, click-through, tray, raccourcis
-├── preload.js         # pont sécurisé renderer <-> main
-├── renderer/
-│   ├── index.html
-│   ├── style.css
-│   └── toy.js         # physique de corde + rendu canvas + interactions
-├── scripts/
-│   └── gen-icon.js    # génère l'icône du tray (PNG, sans dépendance)
-└── assets/
-    └── tray.png       # généré par npm run geticon
-```
 
-## Idées d'évolution
+→ `dist/Cat Toy Setup 1.0.0.exe` (installeur) et `dist/Cat Toy 1.0.0.exe` (portable).
 
-- Choix du jouet (plume, souris, image custom) via le menu tray.
-- Plusieurs jouets à la fois.
-- Réglage de la position d'accroche (glisser le crochet le long du haut de l'écran).
-- Lancement automatique au démarrage de Windows.
-- Support multi-écrans.
+> Windows SmartScreen au premier lancement (exe non signé) :
+> *Informations complémentaires* → *Exécuter quand même*.
+
+## Sous le capot
+
+Electron, un canvas, une corde en intégration de Verlet, zéro dépendance native,
+zéro écoute clavier. Le process main gère l'overlay transparent click-through,
+le renderer fait la physique et les humeurs. C'est tout.
+
+## Licence
+
+MIT — cible autorisée pour tous les élèves. 🎓
