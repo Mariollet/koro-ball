@@ -16,7 +16,7 @@ const ctx = canvas.getContext('2d');
 const DEFAULTS = {
   ball: { color: '#f4c430', radius: 26 },
   rope: { color: '#d2b48c', length: 340, stiffness: 18 },
-  break: { enabled: true, sensitivity: 0.4, respawnMs: 2600 },
+  break: { sensitivity: 0.4, respawnMs: 2600 },
   placement: { anchorPct: 0.5 },
   autostart: false,
 };
@@ -25,7 +25,7 @@ let S = (window.toy && window.toy.getSettings) ? window.toy.getSettings() : DEFA
 // Parametres derives (recalcules par applySettings)
 let BALL_R = 26, GRAB_R = 38, BAT_R = 74, ITER = 18;
 let ANCHOR_PCT = 0.5, ROPE_LEN_SETTING = 340;
-let BREAK_ENABLED = true, BREAK_SENS = 0.4, RESPAWN_MS = 2600;
+let BREAK_SENS = 0.4, RESPAWN_MS = 2600;
 let ropeRGB = { r: 210, g: 180, b: 140 };
 
 // ---- Constantes physiques ---------------------------------------------
@@ -65,7 +65,6 @@ function applySettings() {
   ITER = S.rope.stiffness;
   ROPE_LEN_SETTING = S.rope.length;
   ANCHOR_PCT = S.placement.anchorPct;
-  BREAK_ENABLED = S.break.enabled;
   BREAK_SENS = S.break.sensitivity;
   RESPAWN_MS = S.break.respawnMs;
   ropeRGB = hexToRgb(S.rope.color);
@@ -237,8 +236,8 @@ function currentMood(now) {
   if (asleep) return 'nemui';
   if (dragging) return 'shock';
   if (transientMood && now < transientUntil) return transientMood;
-  if (BREAK_ENABLED && stress >= 0.72) return 'anger';
-  if (BREAK_ENABLED && stress >= 0.42) return 'angry';
+  if (stress >= 0.72) return 'anger';
+  if (stress >= 0.42) return 'angry';
   return 'normal';
 }
 
@@ -359,7 +358,7 @@ function simulate() {
       b.x += mouse.vx * k;
       b.y += mouse.vy * k;
       addJingle(Math.min(0.8, speed / 40));
-      if (BREAK_ENABLED) stress += Math.min(STRESS_BAT, speed / 200) * BREAK_SENS;
+      stress += Math.min(STRESS_BAT, speed / 200) * BREAK_SENS;
     }
   }
 
@@ -386,7 +385,7 @@ function simulate() {
   }
 
   // usure : tirer au-dela de la longueur de corde la fatigue ; sinon cicatrise
-  if (state === 'alive' && BREAK_ENABLED) {
+  if (state === 'alive') {
     if (dragging) {
       const ropeLen = segLen * (N - 1);
       const ad = Math.hypot(b.x - anchorX, b.y - anchorY);

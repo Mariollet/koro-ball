@@ -3,7 +3,7 @@
 const el = (id) => document.getElementById(id);
 
 const CONTROLS = ['ballRadius', 'ropeColor', 'ropeLength', 'ropeStiffness',
-  'breakEnabled', 'breakSens', 'respawnMs', 'anchorPct', 'autostart'];
+  'breakSens', 'respawnMs', 'anchorPct', 'autostart'];
 
 function renderOutputs() {
   el('ballRadiusOut').textContent = el('ballRadius').value + ' px';
@@ -19,7 +19,6 @@ function fill(s) {
   el('ropeColor').value = s.rope.color;
   el('ropeLength').value = s.rope.length;
   el('ropeStiffness').value = s.rope.stiffness;
-  el('breakEnabled').checked = s.break.enabled;
   el('breakSens').value = s.break.sensitivity;
   el('respawnMs').value = s.break.respawnMs;
   el('anchorPct').value = s.placement.anchorPct;
@@ -31,7 +30,7 @@ function collect() {
   return {
     ball: { radius: +el('ballRadius').value },
     rope: { color: el('ropeColor').value, length: +el('ropeLength').value, stiffness: +el('ropeStiffness').value },
-    break: { enabled: el('breakEnabled').checked, sensitivity: +el('breakSens').value, respawnMs: +el('respawnMs').value },
+    break: { sensitivity: +el('breakSens').value, respawnMs: +el('respawnMs').value },
     placement: { anchorPct: +el('anchorPct').value },
     autostart: el('autostart').checked,
   };
