@@ -13,9 +13,9 @@ let paused = false;
 // ---- Reglages ----------------------------------------------------------
 const DEFAULT_SETTINGS = {
   ball: { color: '#f4c430', radius: 26 },
-  rope: { color: '#d2b48c', length: 340, stiffness: 18 },
-  break: { enabled: true, sensitivity: 0.4, respawnMs: 2600 },
-  placement: { anchorPct: 0.5 },
+  rope: { color: '#d2b48c', length: 340, stiffness: 15 },
+  break: { sensitivity: 0.3, respawnMs: 3000 },
+  placement: { anchorPct: 0.38 },
   autostart: false,
 };
 
@@ -190,12 +190,6 @@ function rebuildTrayMenu() {
     { label: paused ? 'Reprendre' : 'Pause', click: togglePause },
     { label: 'Paramètres…', click: openSettings },
     { type: 'separator' },
-    {
-      label: 'La corde peut casser',
-      type: 'checkbox',
-      checked: settings.break.enabled,
-      click: (mi) => { settings.break.enabled = mi.checked; saveSettings(); broadcastSettings(); },
-    },
     {
       label: 'Démarrer avec Windows',
       type: 'checkbox',
