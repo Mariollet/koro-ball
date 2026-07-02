@@ -112,6 +112,7 @@ function recenter() {
   state = 'alive';
   stress = 0;
   asleep = false;
+  clones = []; splitUntil = 0; // pas de clones rescapes
   pts[0].pinned = true;
   for (let i = 0; i < N; i++) {
     pts[i].x = anchorX;
@@ -189,7 +190,8 @@ function setInteractive(on) {
 // En pause, l'overlay doit rester 100% traversant : les mousemove continuent
 // d'arriver (forward) et re-armeraient la capture des clics sinon.
 function updateInteractivity() {
-  if (paused) {
+  if (paused || performance.now() < splitUntil) {
+    // en pause ou pendant le dedoublement : la vraie tete n'est pas saisissable
     hovering = false;
     setInteractive(false);
     canvas.style.cursor = 'default';
@@ -249,6 +251,21 @@ let dodgeReadyAt = 0;         // cooldown entre deux esquives
 let dodgeGuardUntil = 0;      // fenetre pendant laquelle le coup de patte rate
 let interactiveGraceUntil = 0; // garde le clic sur l'overlay juste apres l'esquive
 
+// ---- Pouvoir : dedoublement (vrais clones, facon Mach 20) ---------------
+// Quand on l'embete trop (stade noir) et qu'on continue de le frapper, il se
+// scinde en 2-3 tetes IDENTIQUES : des copies de la vraie, accrochees au meme
+// crochet, qui naissent superposees puis divergent doucement. Chaque tete a
+// EXACTEMENT le meme comportement (elle esquive la souris, se fait bousculer,
+// se balance) et une seule est la vraie — impossible de la distinguer. A la
+// fin, les copies convergent vers la vraie et s'y fondent (pas de fondu sec).
+const SPLIT_MS = 2400;         // duree du dedoublement (ms)
+const FUSE_MS = 500;           // convergence finale des copies vers la vraie tete
+let clones = [];               // [{ pts:[...N copies...], st:{dodgeReadyAt,dodgeGuardUntil} }]
+const realSt = { dodgeReadyAt: 0, dodgeGuardUntil: 0 }; // esquive de la vraie tete pendant le split
+let splitStart = 0;            // debut (temps mur) — pour le bref clignotement d'apparition
+let splitUntil = 0;            // fin — au-dela : refusion (une seule tete)
+let splitReadyAt = 0;          // cooldown avant un nouveau dedoublement
+
 // ---- Rupture / reapparition -------------------------------------------
 function breakRope() {
   state = 'broken';
@@ -256,6 +273,7 @@ function breakRope() {
   pts[0].pinned = false; // le haut se detache du crochet -> tout tombe
   dragging = false;      // si on cassait en tirant, la tete nous echappe
   asleep = false;
+  clones = []; splitUntil = 0;
   transientMood = null;
   addJingle(1);          // dernier tintement en cassant
 }
@@ -267,6 +285,7 @@ function respawn() {
   state = 'alive';
   stress = 0;
   asleep = false;
+  clones = []; splitUntil = 0;
   pts[0].pinned = true;
   const dir = anchorX > W * 0.5 ? -1 : 1; // pivote vers l'interieur de l'ecran
   for (let i = 0; i < N; i++) {
@@ -276,6 +295,107 @@ function respawn() {
     pts[i].oy = pts[i].y;
   }
   setTransientMood('right', 1600); // "tout juste !" : il est de retour
+}
+
+// ---- Dedoublement ------------------------------------------------------
+function triggerSplit(now) {
+  splitStart = now;
+  splitUntil = now + SPLIT_MS;
+  splitReadyAt = now + 4000 + Math.random() * 2500; // rare : 4-6.5 s entre deux
+  stress = Math.min(stress, 0.4); // il s'echappe en se dedoublant : la tension retombe
+  realSt.dodgeReadyAt = now + 200; realSt.dodgeGuardUntil = 0;
+  addJingle(1);
+  spawnClones(now);
+}
+
+function spawnClones(now) {
+  clones = [];
+  const extra = 1 + Math.floor(Math.random() * 5); // 1 a 5 copies => 2 a 6 tetes au total
+  for (let i = 0; i < extra; i++) {
+    // copie exacte de la vraie corde : les tetes naissent superposees (indiscernables)
+    const p2 = pts.map((pt) => ({ x: pt.x, y: pt.y, ox: pt.ox, oy: pt.oy }));
+    // faible impulsion laterale distincte (alternee gauche/droite) pour qu'elles
+    // divergent sans "exploser" — la laisse les rapprochera de toute facon.
+    const push = (i % 2 === 0 ? 1 : -1) * (7 + Math.random() * 5);
+    for (let j = 1; j < p2.length; j++) p2[j].ox -= push * (j / (p2.length - 1));
+    clones.push({ pts: p2, st: { dodgeReadyAt: now + 200, dodgeGuardUntil: 0 } });
+  }
+}
+
+// Comportement d'UNE tete (vraie ou copie), identique pour toutes : Verlet,
+// esquive douce de la souris, bousculade au contact, corde tendue, rebonds.
+// Aucune usure / humeur / casse ici — juste le mouvement, partage par toutes.
+function simHead(p, st, speed) {
+  const now = performance.now();
+  for (let j = 1; j < N; j++) {
+    const pt = p[j];
+    const vx = (pt.x - pt.ox) * FRICTION;
+    const vy = (pt.y - pt.oy) * FRICTION;
+    pt.ox = pt.x; pt.oy = pt.y;
+    pt.x += vx; pt.y += vy + GRAVITY;
+  }
+  const b = p[N - 1];
+  // esquive (impulsion douce — pas d'explosion)
+  if (speed > 8) {
+    const ddx = b.x - mouse.x, ddy = b.y - mouse.y;
+    const d = Math.hypot(ddx, ddy);
+    const closing = (ddx * mouse.vx + ddy * mouse.vy) > 0;
+    if (closing && d > BAT_R * 0.9 && d < BAT_R * 2.4 && now >= st.dodgeReadyAt) {
+      if (Math.random() < 0.55) {
+        let px = -mouse.vy, py = mouse.vx;
+        const pl = Math.hypot(px, py) || 1; px /= pl; py /= pl;
+        if (px * ddx + py * ddy < 0) { px = -px; py = -py; }
+        const amp = (9 + Math.min(9, speed)) * DODGE_MULT;
+        b.x += px * amp + (ddx / (d || 1)) * 4;
+        b.y += py * amp * 0.6;
+        st.dodgeGuardUntil = now + 220;
+        st.dodgeReadyAt = now + 1100 + Math.random() * 1000;
+      } else {
+        st.dodgeReadyAt = now + 600;
+      }
+    }
+  }
+  // bousculade au contact (rate juste apres une esquive)
+  if (speed > 6 && now > st.dodgeGuardUntil) {
+    const d = Math.hypot(mouse.x - b.x, mouse.y - b.y);
+    if (d < BAT_R) { const k = (1 - d / BAT_R) * 0.9; b.x += mouse.vx * k; b.y += mouse.vy * k; }
+  }
+  // corde tendue (ancre commune a toutes les tetes)
+  for (let k = 0; k < ITER; k++) {
+    p[0].x = anchorX; p[0].y = anchorY;
+    for (let j = 0; j < N - 1; j++) {
+      const a = p[j], c = p[j + 1];
+      const dx = c.x - a.x, dy = c.y - a.y;
+      const dist = Math.hypot(dx, dy) || 0.0001;
+      const diff = (segLen - dist) / dist;
+      const ox = dx * 0.5 * diff, oy = dy * 0.5 * diff;
+      if (j !== 0) { a.x -= ox; a.y -= oy; }
+      c.x += ox; c.y += oy;
+    }
+  }
+  // rebonds bords
+  for (let j = 1; j < N; j++) {
+    const pt = p[j];
+    if (pt.x < BALL_R) { pt.x = BALL_R; pt.ox = pt.x + (pt.x - pt.ox) * 0.4; }
+    if (pt.x > W - BALL_R) { pt.x = W - BALL_R; pt.ox = pt.x + (pt.x - pt.ox) * 0.4; }
+    if (pt.y > H - BALL_R) { pt.y = H - BALL_R; pt.oy = pt.y + (pt.y - pt.oy) * 0.4; }
+  }
+}
+
+// Laisse : tout au long du dedoublement, chaque copie est doucement ramenee
+// vers la vraie corde (interpolation point a point) — elle garde sa propre
+// physique (jitter, esquive) mais reste toujours proche, effet "image remanente"
+// plutot que plusieurs jouets eparpilles. Dans les FUSE_MS derniers ms, la
+// correction se renforce fortement pour une fusion propre et nette.
+function leashClones(now) {
+  const tail = Math.max(0, Math.min(1, (now - (splitUntil - FUSE_MS)) / FUSE_MS));
+  const k = 0.05 + tail * 0.55; // laisse legere en continu, forte a l'approche de la fusion
+  for (const cl of clones) {
+    for (let j = 0; j < N; j++) {
+      cl.pts[j].x += (pts[j].x - cl.pts[j].x) * k;
+      cl.pts[j].y += (pts[j].y - cl.pts[j].y) * k;
+    }
+  }
 }
 
 // ---- Horloge d'animation ----------------------------------------------
@@ -295,8 +415,29 @@ function simulate() {
 
   updateInteractivity();
 
+  const now = performance.now();
+
+  // Dedoublement : la vraie tete ET ses copies vivent en parallele, meme
+  // comportement (elles esquivent / se font bousculer par la souris), mais
+  // restent groupees pres l'une de l'autre (leashClones) — effet image
+  // remanente. Pas de grab pendant ce temps. En fin de fenetre, la laisse se
+  // resserre fort et les copies se fondent dans la vraie.
+  if (now < splitUntil) {
+    setInteractive(false);
+    t += 0.016;
+    simHead(pts, realSt, speed);
+    for (const cl of clones) simHead(cl.pts, cl.st, speed);
+    leashClones(now);
+    jingle *= 0.92;
+    return;
+  }
+  if (clones.length) {
+    clones = []; // refusion terminee -> une seule tete
+    setTransientMood('nameteru', 1800); // fier de son coup : rayures vertes moqueuses
+  }
+
   // reapparition apres une rupture
-  if (state === 'broken' && performance.now() - breakAt > RESPAWN_MS) respawn();
+  if (state === 'broken' && now - breakAt > RESPAWN_MS) respawn();
 
   // Sommeil : sans sollicitation, la tete ne bouge plus du tout.
   if (asleep) {
@@ -331,7 +472,6 @@ function simulate() {
     const ddx = b.x - mouse.x, ddy = b.y - mouse.y;
     const d = Math.hypot(ddx, ddy);
     const closing = (ddx * mouse.vx + ddy * mouse.vy) > 0; // la souris se rapproche
-    const now = performance.now();
     if (closing && d > BAT_R * 0.9 && d < BAT_R * 2.4 && now >= dodgeReadyAt) {
       if (Math.random() < 0.35 + stress * 0.4) {
         // impulsion perpendiculaire a la trajectoire de la souris, cote fuite
@@ -354,7 +494,7 @@ function simulate() {
 
   // coup de patte : souris rapide pres de la tete -> impulsion (+ usure).
   // Rate si elle vient d'esquiver (fenetre dodgeGuardUntil).
-  if (state === 'alive' && !dragging && speed > 6 && performance.now() > dodgeGuardUntil) {
+  if (state === 'alive' && !dragging && speed > 6 && now > dodgeGuardUntil) {
     const d = Math.hypot(mouse.x - b.x, mouse.y - b.y);
     if (d < BAT_R) {
       const k = (1 - d / BAT_R) * 0.9;
@@ -362,6 +502,8 @@ function simulate() {
       b.y += mouse.vy * k;
       addJingle(Math.min(0.8, speed / 40));
       stress += Math.min(STRESS_BAT, speed / 200) * BREAK_SENS;
+      // stade noir + on insiste -> il s'echappe en se dedoublant (Mach 20)
+      if (stress >= 0.72 && now >= splitReadyAt) triggerSplit(now);
     }
   }
 
@@ -697,17 +839,12 @@ function drawFace(cx, cy, R, mood, now) {
   }
 }
 
-function drawBall() {
-  const b = bob();
-  const now = performance.now();
-  const mood = currentMood(now);
-
-  // tremblement : tintement + fureur (stress eleve)
-  const trembling = mood === 'anger' ? 1.6 : (mood === 'angry' ? 0.7 : 0);
-  const shake = jingle * 3 + trembling;
-  const cx = b.x + Math.sin(t * 90) * shake;
-  const cy = b.y + Math.cos(t * 85) * shake;
-  const R = BALL_R;
+// Dessine une tete complete (ombre, gradient, rayures, contour, chapeau, visage)
+// a une position donnee. Extrait de drawBall pour etre reutilise par les clones
+// du dedoublement (eventuellement en semi-transparence via alpha).
+function drawHeadAt(cx, cy, R, b, mood, now, alpha) {
+  ctx.save();
+  if (alpha !== 1) ctx.globalAlpha = alpha;
 
   // couleur du visage selon l'humeur (rayures nameteru par-dessus la base)
   const baseHex = MOOD_COLORS[mood] || S.ball.color;
@@ -757,6 +894,23 @@ function drawBall() {
   drawCap(cx, cy, R, b);
   drawFace(cx, cy, R, mood, now);
 
+  ctx.restore();
+}
+
+function drawBall() {
+  const b = bob();
+  const now = performance.now();
+  const mood = currentMood(now);
+
+  // tremblement : tintement + fureur (stress eleve)
+  const trembling = mood === 'anger' ? 1.6 : (mood === 'angry' ? 0.7 : 0);
+  const shake = jingle * 3 + trembling;
+  const cx = b.x + Math.sin(t * 90) * shake;
+  const cy = b.y + Math.cos(t * 85) * shake;
+  const R = BALL_R;
+
+  drawHeadAt(cx, cy, R, b, mood, now, 1);
+
   // arcs "ding" quand ca tinte
   if (jingle > 0.05) {
     ctx.strokeStyle = `rgba(255,220,120,${jingle})`;
@@ -773,8 +927,48 @@ function drawBall() {
   }
 }
 
+// Corde neutre (sans usure) tracee depuis un tableau de N points : sert a rendre
+// TOUTES les tetes du dedoublement a l'identique (vraie comme copies).
+function drawRopePts(p, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(60,60,70,0.9)';
+  ctx.beginPath();
+  ctx.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
+  ctx.fill();
+  const c = ropeRGB;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},0.95)`;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p[0].x, p[0].y);
+  for (let i = 1; i < N - 1; i++) {
+    const mx = (p[i].x + p[i + 1].x) / 2;
+    const my = (p[i].y + p[i + 1].y) / 2;
+    ctx.quadraticCurveTo(p[i].x, p[i].y, mx, my);
+  }
+  ctx.lineTo(p[N - 1].x, p[N - 1].y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Une tete complete (corde + visage 'normal') depuis un tableau de points.
+function drawOneHead(p, now, alpha) {
+  drawRopePts(p, alpha);
+  const b = p[N - 1];
+  drawHeadAt(b.x, b.y, BALL_R, b, 'normal', now, alpha);
+}
+
 function render() {
   ctx.clearRect(0, 0, W, H);
+  const now = performance.now();
+  if (now < splitUntil) {
+    // toutes les tetes rendues a l'identique -> on ne peut pas dire laquelle est la vraie
+    const a = Math.min(1, (now - splitStart) / 100); // bref clignotement d'apparition
+    drawOneHead(pts, now, a);
+    for (const cl of clones) drawOneHead(cl.pts, now, a);
+    return;
+  }
   drawRope();
   drawBall();
 }
@@ -803,6 +997,9 @@ if (window.toy) {
       breakAt += dt;
       transientUntil += dt;
       dodgeReadyAt += dt;
+      splitStart += dt;
+      splitUntil += dt;
+      splitReadyAt += dt;
     }
   });
   window.toy.onRecenter(() => recenter());

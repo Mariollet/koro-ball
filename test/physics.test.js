@@ -43,9 +43,16 @@ function loadToy() {
     anyNaN: pts.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y)),
   }),
   step: (n) => { for (let i = 0; i < n; i++) simulate(); },
+  renderOnce: () => render(),
   setMouse: (x, y) => { if (mouse.fx === -999) { mouse.fx = x; mouse.fy = y; } mouse.x = x; mouse.y = y; mouse.inside = true; mouse.lastMoveT = performance.now(); },
   setDragging: (v) => { dragging = v; },
   setSens: (v) => { S.break.sensitivity = v; applySettings(); },
+  setStress: (v) => { stress = v; },
+  setDodgeReady: (ms) => { dodgeReadyAt = performance.now() + ms; }, // neutralise l'esquive (deterministe)
+  armSplit: () => { splitReadyAt = 0; },
+  splitActive: () => performance.now() < splitUntil,
+  cloneCount: () => clones.length,
+  clonesNaN: () => clones.some((cl) => cl.pts.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y))),
   reset: () => recenter(),
   ropeLen: () => segLen * (N - 1),
   anchor: () => ({ x: anchorX, y: anchorY }),
@@ -135,6 +142,44 @@ api.reset();
 api.setSens(0.4);
 swipe();
 check('un seul coup ne casse pas', api.inspect().state !== 'broken');
+
+// Coup de patte franc a travers la tete (souris rapide, dans BAT_R).
+function batThroughBob() {
+  const b = api.inspect();
+  api.setMouse(b.bobx - 60, b.boby); clock += 16; api.step(1);
+  api.setMouse(b.bobx + 20, b.boby); clock += 16; api.step(1);
+}
+
+console.log('== Dedoublement : vrais clones disperses ==');
+api.reset();
+api.setStress(0);
+check('pas de dedoublement au repos', !api.splitActive() && api.cloneCount() === 0);
+
+// stade noir + on insiste (esquive neutralisee) -> dedoublement
+api.reset();
+api.setStress(0.8);
+api.setDodgeReady(1e9);
+api.armSplit();
+batThroughBob();
+check('se dedouble au stade noir', api.splitActive());
+check('1 a 5 copies (2-6 tetes au total)', api.cloneCount() >= 1 && api.cloneCount() <= 5, `n=${api.cloneCount()}`);
+
+// les mini-cordes se balancent sans NaN, et le rendu ne plante pas
+let cloneNaN = false;
+for (let i = 0; i < 120 && api.splitActive(); i++) {
+  clock += 16; api.step(1); api.renderOnce();
+  if (api.clonesNaN() || api.inspect().anyNaN) cloneNaN = true;
+}
+check('pas de NaN pendant le dedoublement', !cloneNaN);
+
+// refusion : au-dela de la fenetre, plus de clones, la vraie tete revient
+clock += 2400; api.step(1);
+check('refusionne (plus de clones)', !api.splitActive() && api.cloneCount() === 0);
+check('la vraie tete est de retour', api.inspect().state === 'alive' && !api.inspect().anyNaN);
+
+// apres refusion, la tete se re-suspend proprement
+for (let k = 0; k < 400; k++) { clock += 16; api.step(1); }
+check('pas de NaN au total', !api.inspect().anyNaN);
 
 console.log(failures === 0 ? '\n=== TOUS LES TESTS PASSENT ===' : `\n=== ${failures} TEST(S) EN ECHEC ===`);
 process.exit(failures === 0 ? 0 : 1);
