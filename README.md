@@ -10,6 +10,16 @@ sauf quand tu décides de l'attraper.
 
 ## Lancer
 
+Va sur [**Releases**](https://github.com/Mariollet/koro-ball/releases/latest) et télécharge :
+
+- `Koro-ball-Setup-X.Y.Z.exe` — installeur (recommandé, raccourcis + désinstallation propre)
+- `Koro-ball-X.Y.Z.exe` — portable (aucune installation, se lance directement)
+
+> Windows SmartScreen au premier lancement (exe non signé) :
+> *Informations complémentaires* → *Exécuter quand même*.
+
+### Depuis les sources (développement)
+
 ```bash
 git clone https://github.com/Mariollet/koro-ball.git
 cd koro-ball
@@ -65,10 +75,7 @@ tout s'applique en direct, sur tous les écrans à la fois.
 npm run dist
 ```
 
-→ `dist/Koro-ball Setup 1.0.0.exe` (installeur) et `dist/Koro-ball 1.0.0.exe` (portable).
-
-> Windows SmartScreen au premier lancement (exe non signé) :
-> *Informations complémentaires* → *Exécuter quand même*.
+→ `dist/Koro-ball-Setup-X.Y.Z.exe` (installeur) et `dist/Koro-ball-X.Y.Z.exe` (portable).
 
 ### Release automatique
 
