@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   rope: { color: '#d2b48c', length: 340, stiffness: 15 },
   break: { sensitivity: 0.3, respawnMs: 3000 },
   placement: { anchorPct: 0.38 },
+  dodge: { machSpeed: 20 },
   autostart: false,
 };
 

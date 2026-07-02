@@ -18,6 +18,7 @@ const DEFAULTS = {
   rope: { color: '#d2b48c', length: 340, stiffness: 18 },
   break: { sensitivity: 0.4, respawnMs: 2600 },
   placement: { anchorPct: 0.5 },
+  dodge: { machSpeed: 20 },
   autostart: false,
 };
 let S = (window.toy && window.toy.getSettings) ? window.toy.getSettings() : DEFAULTS;
@@ -26,6 +27,7 @@ let S = (window.toy && window.toy.getSettings) ? window.toy.getSettings() : DEFA
 let BALL_R = 26, GRAB_R = 38, BAT_R = 74, ITER = 18;
 let ANCHOR_PCT = 0.5, ROPE_LEN_SETTING = 340;
 let BREAK_SENS = 0.4, RESPAWN_MS = 2600;
+let DODGE_MULT = 1; // 1 = Mach 20 (reglage d'origine) ; proportionnel autour de cette valeur
 let ropeRGB = { r: 210, g: 180, b: 140 };
 
 // ---- Constantes physiques ---------------------------------------------
@@ -67,6 +69,7 @@ function applySettings() {
   ANCHOR_PCT = S.placement.anchorPct;
   BREAK_SENS = S.break.sensitivity;
   RESPAWN_MS = S.break.respawnMs;
+  DODGE_MULT = S.dodge.machSpeed / 20;
   ropeRGB = hexToRgb(S.rope.color);
 
   asleep = false;    // laisse la physique reagir au changement
@@ -336,7 +339,7 @@ function simulate() {
         const pl = Math.hypot(px, py) || 1;
         px /= pl; py /= pl;
         if (px * ddx + py * ddy < 0) { px = -px; py = -py; }
-        const amp = 16 + Math.min(14, speed);
+        const amp = (16 + Math.min(14, speed)) * DODGE_MULT;
         b.x += px * amp + (ddx / (d || 1)) * 6;
         b.y += py * amp * 0.6;
         dodgeGuardUntil = now + 260;       // le coup qui suit passe dans le vide
