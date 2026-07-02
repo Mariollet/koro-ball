@@ -30,6 +30,11 @@
   "build": {
     "appId": "fr.studiokg.koroball",
     "productName": "Koro-ball",
+    "compression": "maximum",
+    "electronLanguages": [
+      "fr",
+      "en-US"
+    ],
     "files": [
       "main.js",
       "preload.js",
