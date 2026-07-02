@@ -69,20 +69,6 @@ Icône de la zone de notification → **Paramètres…**
 Couleur, taille, longueur de corde, fragilité, position du crochet —
 tout s'applique en direct, sur tous les écrans à la fois.
 
-## Fabriquer le .exe
-
-```bash
-npm run dist
-```
-
-→ `dist/Koro-ball-Setup-X.Y.Z.exe` (installeur) et `dist/Koro-ball-X.Y.Z.exe` (portable).
-
-### Release automatique
-
-Pousser un tag `v*` (ex. `git tag v1.1.0 && git push --tags`) déclenche une build
-sur GitHub Actions qui publie l'installeur et le portable sur une Release GitHub.
-Déclenchable aussi à la main depuis l'onglet **Actions** (`workflow_dispatch`).
-
 ## Sous le capot
 
 Electron, un canvas, une corde en intégration de Verlet, zéro dépendance native,
