@@ -1,6 +1,6 @@
 {
   "name": "koro-ball",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Une tete de Koro-sensei suspendue en haut de l'ecran : overlay Electron transparent, always-on-top, click-through.",
   "main": "main.js",
   "repository": {
